@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: inter-proxy
+    env: node
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: INTER_CERTIFICATE_BASE64
+        sync: false
+      - key: INTER_KEY_BASE64
+        sync: false
+      - key: PROXY_SECRET
+        generateValue: true
