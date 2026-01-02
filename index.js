@@ -7,10 +7,17 @@ app.use(cors());
 app.use(express.json());
 
 const INTER_API_URL = 'cdpj.partners.bancointer.com.br';
+const CORA_API_STAGE = 'matls-clients.api.stage.cora.com.br';
+const CORA_API_PROD = 'matls-clients.api.cora.com.br';
 
 // Certificado e chave em Base64 (vem das env vars)
+// Inter
 const INTER_CERTIFICATE_BASE64 = process.env.INTER_CERTIFICATE_BASE64;
 const INTER_KEY_BASE64 = process.env.INTER_KEY_BASE64;
+// Cora
+const CORA_CERT_BASE64 = process.env.CORA_CERT_BASE64;
+const CORA_KEY_BASE64 = process.env.CORA_KEY_BASE64;
+
 const PROXY_SECRET = process.env.PROXY_SECRET || 'default-secret';
 
 // Middleware de autenticação
@@ -67,12 +74,58 @@ function makeInterRequest(options, postData = null) {
   });
 }
 
+// Fazer requisição com mTLS para Cora
+function makeCoraRequest(options, postData = null) {
+  return new Promise((resolve, reject) => {
+    const cert = decodeBase64(CORA_CERT_BASE64);
+    const key = decodeBase64(CORA_KEY_BASE64);
+
+    const requestOptions = {
+      hostname: options.hostname || CORA_API_PROD,
+      port: 443,
+      path: options.path,
+      method: options.method || 'GET',
+      headers: options.headers || {},
+      cert: cert,
+      key: key,
+      rejectUnauthorized: true,
+    };
+
+    const req = https.request(requestOptions, (res) => {
+      let data = '';
+      res.on('data', (chunk) => data += chunk);
+      res.on('end', () => {
+        resolve({
+          statusCode: res.statusCode,
+          headers: res.headers,
+          body: data,
+        });
+      });
+    });
+
+    req.on('error', (error) => {
+      reject(error);
+    });
+
+    if (postData) {
+      req.write(postData);
+    }
+    req.end();
+  });
+}
+
 // Health check
 app.get('/health', (req, res) => {
   res.json({ 
     status: 'ok', 
-    hasCert: !!INTER_CERTIFICATE_BASE64,
-    hasKey: !!INTER_KEY_BASE64 
+    inter: {
+      hasCert: !!INTER_CERTIFICATE_BASE64,
+      hasKey: !!INTER_KEY_BASE64,
+    },
+    cora: {
+      hasCert: !!CORA_CERT_BASE64,
+      hasKey: !!CORA_KEY_BASE64,
+    }
   });
 });
 
@@ -281,7 +334,7 @@ app.get('/pix/cob/:txid', authenticate, async (req, res) => {
   }
 });
 
-// Proxy genérico para outras rotas
+// Proxy genérico para outras rotas Inter
 app.all('/proxy/*', authenticate, async (req, res) => {
   try {
     const path = req.params[0];
@@ -310,9 +363,170 @@ app.all('/proxy/*', authenticate, async (req, res) => {
   }
 });
 
+// =============================================
+// CORA ROUTES
+// =============================================
+
+// Cora OAuth Token
+app.post('/cora/oauth/token', authenticate, async (req, res) => {
+  try {
+    const { client_id, environment } = req.body;
+    const host = environment === 'production' ? CORA_API_PROD : CORA_API_STAGE;
+    
+    const body = `grant_type=client_credentials&client_id=${client_id}`;
+
+    const response = await makeCoraRequest({
+      hostname: host,
+      path: '/token',
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Content-Length': Buffer.byteLength(body),
+      },
+    }, body);
+
+    res.status(response.statusCode).send(response.body);
+  } catch (error) {
+    console.error('Cora token error:', error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Cora - Emitir boleto
+app.post('/cora/invoices', authenticate, async (req, res) => {
+  try {
+    const authHeader = req.headers['authorization'];
+    const environment = req.headers['x-environment'] || 'production';
+    const host = environment === 'production' ? CORA_API_PROD : CORA_API_STAGE;
+    const body = JSON.stringify(req.body);
+
+    const response = await makeCoraRequest({
+      hostname: host,
+      path: '/invoices',
+      method: 'POST',
+      headers: {
+        'Authorization': authHeader,
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(body),
+      },
+    }, body);
+
+    res.status(response.statusCode).send(response.body);
+  } catch (error) {
+    console.error('Cora invoice create error:', error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Cora - Listar boletos
+app.get('/cora/invoices', authenticate, async (req, res) => {
+  try {
+    const authHeader = req.headers['authorization'];
+    const environment = req.headers['x-environment'] || 'production';
+    const host = environment === 'production' ? CORA_API_PROD : CORA_API_STAGE;
+    
+    const queryParams = new URLSearchParams(req.query).toString();
+    const path = queryParams ? `/invoices?${queryParams}` : '/invoices';
+
+    const response = await makeCoraRequest({
+      hostname: host,
+      path,
+      method: 'GET',
+      headers: {
+        'Authorization': authHeader,
+      },
+    });
+
+    res.status(response.statusCode).send(response.body);
+  } catch (error) {
+    console.error('Cora invoice list error:', error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Cora - Consultar boleto específico
+app.get('/cora/invoices/:invoiceId', authenticate, async (req, res) => {
+  try {
+    const { invoiceId } = req.params;
+    const authHeader = req.headers['authorization'];
+    const environment = req.headers['x-environment'] || 'production';
+    const host = environment === 'production' ? CORA_API_PROD : CORA_API_STAGE;
+
+    const response = await makeCoraRequest({
+      hostname: host,
+      path: `/invoices/${invoiceId}`,
+      method: 'GET',
+      headers: {
+        'Authorization': authHeader,
+      },
+    });
+
+    res.status(response.statusCode).send(response.body);
+  } catch (error) {
+    console.error('Cora invoice detail error:', error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Cora - Cancelar boleto
+app.delete('/cora/invoices/:invoiceId', authenticate, async (req, res) => {
+  try {
+    const { invoiceId } = req.params;
+    const authHeader = req.headers['authorization'];
+    const environment = req.headers['x-environment'] || 'production';
+    const host = environment === 'production' ? CORA_API_PROD : CORA_API_STAGE;
+
+    const response = await makeCoraRequest({
+      hostname: host,
+      path: `/invoices/${invoiceId}`,
+      method: 'DELETE',
+      headers: {
+        'Authorization': authHeader,
+      },
+    });
+
+    res.status(response.statusCode).send(response.body);
+  } catch (error) {
+    console.error('Cora invoice cancel error:', error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Cora - Proxy genérico
+app.all('/cora/proxy/*', authenticate, async (req, res) => {
+  try {
+    const path = req.params[0];
+    const authHeader = req.headers['authorization'];
+    const environment = req.headers['x-environment'] || 'production';
+    const host = environment === 'production' ? CORA_API_PROD : CORA_API_STAGE;
+    const body = req.method !== 'GET' ? JSON.stringify(req.body) : null;
+
+    const headers = {
+      'Authorization': authHeader,
+    };
+
+    if (body) {
+      headers['Content-Type'] = 'application/json';
+      headers['Content-Length'] = Buffer.byteLength(body);
+    }
+
+    const response = await makeCoraRequest({
+      hostname: host,
+      path: '/' + path,
+      method: req.method,
+      headers,
+    }, body);
+
+    res.status(response.statusCode).send(response.body);
+  } catch (error) {
+    console.error('Cora proxy error:', error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`Inter Proxy running on port ${PORT}`);
-  console.log(`Certificate loaded: ${!!INTER_CERTIFICATE_BASE64}`);
-  console.log(`Key loaded: ${!!INTER_KEY_BASE64}`);
+  console.log(`Multi-Bank Proxy running on port ${PORT}`);
+  console.log(`Inter: cert=${!!INTER_CERTIFICATE_BASE64}, key=${!!INTER_KEY_BASE64}`);
+  console.log(`Cora: cert=${!!CORA_CERT_BASE64}, key=${!!CORA_KEY_BASE64}`);
 });
