@@ -468,6 +468,59 @@ app.get('/cora/invoices/:invoiceId', authenticate, async (req, res) => {
   }
 });
 
+// Cora - Consultar saldo
+app.get('/cora/balance/:businessId', authenticate, async (req, res) => {
+  try {
+    const { businessId } = req.params;
+    const authHeader = req.headers['authorization'];
+    const environment = req.headers['x-environment'] || 'production';
+    const host = environment === 'production' ? CORA_API_PROD : CORA_API_STAGE;
+
+    const response = await makeCoraRequest({
+      hostname: host,
+      path: `/businesses/${businessId}/balance`,
+      method: 'GET',
+      headers: {
+        'Authorization': authHeader,
+      },
+    });
+
+    res.status(response.statusCode).send(response.body);
+  } catch (error) {
+    console.error('Cora balance error:', error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Cora - Consultar extrato
+app.get('/cora/statements/:businessId', authenticate, async (req, res) => {
+  try {
+    const { businessId } = req.params;
+    const authHeader = req.headers['authorization'];
+    const environment = req.headers['x-environment'] || 'production';
+    const host = environment === 'production' ? CORA_API_PROD : CORA_API_STAGE;
+    
+    const queryParams = new URLSearchParams(req.query).toString();
+    const path = queryParams 
+      ? `/businesses/${businessId}/statements?${queryParams}` 
+      : `/businesses/${businessId}/statements`;
+
+    const response = await makeCoraRequest({
+      hostname: host,
+      path,
+      method: 'GET',
+      headers: {
+        'Authorization': authHeader,
+      },
+    });
+
+    res.status(response.statusCode).send(response.body);
+  } catch (error) {
+    console.error('Cora statement error:', error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Cora - Cancelar boleto
 app.delete('/cora/invoices/:invoiceId', authenticate, async (req, res) => {
   try {
