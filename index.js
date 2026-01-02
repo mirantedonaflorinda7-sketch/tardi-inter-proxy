@@ -144,6 +144,98 @@ app.get('/banking/extrato', authenticate, async (req, res) => {
   }
 });
 
+// Emitir boleto
+app.post('/banking/boleto', authenticate, async (req, res) => {
+  try {
+    const authHeader = req.headers['authorization'];
+    const body = JSON.stringify(req.body);
+
+    const response = await makeInterRequest({
+      path: '/cobranca/v3/cobrancas',
+      method: 'POST',
+      headers: {
+        'Authorization': authHeader,
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(body),
+      },
+    }, body);
+
+    res.status(response.statusCode).send(response.body);
+  } catch (error) {
+    console.error('Boleto error:', error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Consultar boletos
+app.get('/banking/boletos', authenticate, async (req, res) => {
+  try {
+    const authHeader = req.headers['authorization'];
+    const { dataInicial, dataFinal, situacao } = req.query;
+
+    let path = `/cobranca/v3/cobrancas?dataInicial=${dataInicial}&dataFinal=${dataFinal}`;
+    if (situacao) path += `&situacao=${situacao}`;
+
+    const response = await makeInterRequest({
+      path,
+      method: 'GET',
+      headers: {
+        'Authorization': authHeader,
+      },
+    });
+
+    res.status(response.statusCode).send(response.body);
+  } catch (error) {
+    console.error('Boletos list error:', error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Consultar boleto específico
+app.get('/banking/boleto/:codigoSolicitacao', authenticate, async (req, res) => {
+  try {
+    const { codigoSolicitacao } = req.params;
+    const authHeader = req.headers['authorization'];
+
+    const response = await makeInterRequest({
+      path: `/cobranca/v3/cobrancas/${codigoSolicitacao}`,
+      method: 'GET',
+      headers: {
+        'Authorization': authHeader,
+      },
+    });
+
+    res.status(response.statusCode).send(response.body);
+  } catch (error) {
+    console.error('Boleto detail error:', error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Cancelar boleto
+app.post('/banking/boleto/:codigoSolicitacao/cancelar', authenticate, async (req, res) => {
+  try {
+    const { codigoSolicitacao } = req.params;
+    const authHeader = req.headers['authorization'];
+    const body = JSON.stringify(req.body);
+
+    const response = await makeInterRequest({
+      path: `/cobranca/v3/cobrancas/${codigoSolicitacao}/cancelar`,
+      method: 'POST',
+      headers: {
+        'Authorization': authHeader,
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(body),
+      },
+    }, body);
+
+    res.status(response.statusCode).send(response.body);
+  } catch (error) {
+    console.error('Boleto cancel error:', error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Criar cobrança PIX
 app.put('/pix/cob/:txid', authenticate, async (req, res) => {
   try {
