@@ -545,6 +545,61 @@ app.delete('/cora/invoices/:invoiceId', authenticate, async (req, res) => {
   }
 });
 
+// Cora - Consultar extrato
+app.get('/cora/statements', authenticate, async (req, res) => {
+  try {
+    const authHeader = req.headers['authorization'];
+    const environment = req.headers['x-environment'] || 'production';
+    const host = environment === 'production' ? CORA_API_PROD : CORA_API_STAGE;
+    
+    const queryParams = new URLSearchParams(req.query).toString();
+    const path = queryParams ? `/statements?${queryParams}` : '/statements';
+
+    console.log('Cora statements request to:', host, path);
+
+    const response = await makeCoraRequest({
+      hostname: host,
+      path,
+      method: 'GET',
+      headers: {
+        'Authorization': authHeader,
+      },
+    });
+
+    console.log('Cora statements response:', response.statusCode, response.body.substring(0, 200));
+    res.status(response.statusCode).send(response.body);
+  } catch (error) {
+    console.error('Cora statement error:', error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Cora - Consultar saldo
+app.get('/cora/balance', authenticate, async (req, res) => {
+  try {
+    const authHeader = req.headers['authorization'];
+    const environment = req.headers['x-environment'] || 'production';
+    const host = environment === 'production' ? CORA_API_PROD : CORA_API_STAGE;
+
+    console.log('Cora balance request to:', host, '/balance');
+
+    const response = await makeCoraRequest({
+      hostname: host,
+      path: '/balance',
+      method: 'GET',
+      headers: {
+        'Authorization': authHeader,
+      },
+    });
+
+    console.log('Cora balance response:', response.statusCode, response.body.substring(0, 200));
+    res.status(response.statusCode).send(response.body);
+  } catch (error) {
+    console.error('Cora balance error:', error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Cora - Proxy genérico
 app.all('/cora/proxy/*', authenticate, async (req, res) => {
   try {
