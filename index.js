@@ -555,16 +555,16 @@ app.delete('/cora/invoices/:invoiceId', authenticate, async (req, res) => {
   }
 });
 
-// Cora - Consultar extrato (usa domínio mTLS)
+// Cora - Consultar extrato (usa domínio mTLS com /v1/statements)
 app.get('/cora/statements', authenticate, async (req, res) => {
   try {
     const authHeader = req.headers['authorization'];
     const environment = req.headers['x-environment'] || 'production';
-    // Usar mesmo domínio mTLS para todas as APIs
+    // Usar domínio mTLS para Integração Direta
     const host = environment === 'production' ? CORA_API_PROD : CORA_API_STAGE;
     
     const queryParams = new URLSearchParams(req.query).toString();
-    const path = queryParams ? `/statements?${queryParams}` : '/statements';
+    const path = queryParams ? `/v1/statements?${queryParams}` : '/v1/statements';
 
     console.log('Cora statements request to:', host, path);
 
@@ -585,15 +585,14 @@ app.get('/cora/statements', authenticate, async (req, res) => {
   }
 });
 
-// Cora - Consultar saldo (testa múltiplos endpoints)
+// Cora - Consultar saldo (usa domínio mTLS com /v1/balance)
 app.get('/cora/balance', authenticate, async (req, res) => {
   try {
     const authHeader = req.headers['authorization'];
     const environment = req.headers['x-environment'] || 'production';
-    
-    // Tentar no domínio api.cora.com.br COM mTLS
-    const host = environment === 'production' ? 'api.cora.com.br' : 'api.stage.cora.com.br';
-    const path = '/third-party/account/balance';
+    // Usar domínio mTLS para Integração Direta
+    const host = environment === 'production' ? CORA_API_PROD : CORA_API_STAGE;
+    const path = '/v1/balance';
 
     console.log('Cora balance request to:', host, path);
 
