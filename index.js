@@ -123,6 +123,27 @@ app.get('/banking/saldo', authenticate, async (req, res) => {
   }
 });
 
+// Obter extrato
+app.get('/banking/extrato', authenticate, async (req, res) => {
+  try {
+    const authHeader = req.headers['authorization'];
+    const { dataInicio, dataFim } = req.query;
+
+    const response = await makeInterRequest({
+      path: `/banking/v2/extrato?dataInicio=${dataInicio}&dataFim=${dataFim}`,
+      method: 'GET',
+      headers: {
+        'Authorization': authHeader,
+      },
+    });
+
+    res.status(response.statusCode).send(response.body);
+  } catch (error) {
+    console.error('Extrato error:', error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Criar cobrança PIX
 app.put('/pix/cob/:txid', authenticate, async (req, res) => {
   try {
