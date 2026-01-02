@@ -373,10 +373,16 @@ app.all('/proxy/*', authenticate, async (req, res) => {
 // Cora OAuth Token
 app.post('/cora/oauth/token', authenticate, async (req, res) => {
   try {
-    const { client_id, environment } = req.body;
+    const { client_id, environment, scope } = req.body;
     const host = environment === 'production' ? CORA_API_PROD : CORA_API_STAGE;
     
-    const body = `grant_type=client_credentials&client_id=${client_id}`;
+    // Incluir scope se fornecido (ex: 'account' para saldo/extrato)
+    let body = `grant_type=client_credentials&client_id=${client_id}`;
+    if (scope) {
+      body += `&scope=${encodeURIComponent(scope)}`;
+    }
+
+    console.log('Cora token request:', { host, scope, bodyLength: body.length });
 
     const response = await makeCoraRequest({
       hostname: host,
@@ -388,6 +394,7 @@ app.post('/cora/oauth/token', authenticate, async (req, res) => {
       },
     }, body);
 
+    console.log('Cora token response:', response.statusCode);
     res.status(response.statusCode).send(response.body);
   } catch (error) {
     console.error('Cora token error:', error.message);
