@@ -9,6 +9,9 @@ app.use(express.json());
 const INTER_API_URL = 'cdpj.partners.bancointer.com.br';
 const CORA_API_STAGE = 'matls-clients.api.stage.cora.com.br';
 const CORA_API_PROD = 'matls-clients.api.cora.com.br';
+// Domínio para third-party (saldo, extrato, conta)
+const CORA_THIRDPARTY_STAGE = 'api.stage.cora.com.br';
+const CORA_THIRDPARTY_PROD = 'api.cora.com.br';
 
 // Certificado e chave em Base64 (vem das env vars)
 // Inter
@@ -545,15 +548,15 @@ app.delete('/cora/invoices/:invoiceId', authenticate, async (req, res) => {
   }
 });
 
-// Cora - Consultar extrato
+// Cora - Consultar extrato (usa domínio third-party)
 app.get('/cora/statements', authenticate, async (req, res) => {
   try {
     const authHeader = req.headers['authorization'];
     const environment = req.headers['x-environment'] || 'production';
-    const host = environment === 'production' ? CORA_API_PROD : CORA_API_STAGE;
+    const host = environment === 'production' ? CORA_THIRDPARTY_PROD : CORA_THIRDPARTY_STAGE;
     
     const queryParams = new URLSearchParams(req.query).toString();
-    const path = queryParams ? `/statements?${queryParams}` : '/statements';
+    const path = queryParams ? `/third-party/statements?${queryParams}` : '/third-party/statements';
 
     console.log('Cora statements request to:', host, path);
 
@@ -574,18 +577,18 @@ app.get('/cora/statements', authenticate, async (req, res) => {
   }
 });
 
-// Cora - Consultar saldo
+// Cora - Consultar saldo (usa domínio third-party)
 app.get('/cora/balance', authenticate, async (req, res) => {
   try {
     const authHeader = req.headers['authorization'];
     const environment = req.headers['x-environment'] || 'production';
-    const host = environment === 'production' ? CORA_API_PROD : CORA_API_STAGE;
+    const host = environment === 'production' ? CORA_THIRDPARTY_PROD : CORA_THIRDPARTY_STAGE;
 
-    console.log('Cora balance request to:', host, '/balance');
+    console.log('Cora balance request to:', host, '/third-party/account/balance');
 
     const response = await makeCoraRequest({
       hostname: host,
-      path: '/balance',
+      path: '/third-party/account/balance',
       method: 'GET',
       headers: {
         'Authorization': authHeader,
@@ -596,6 +599,32 @@ app.get('/cora/balance', authenticate, async (req, res) => {
     res.status(response.statusCode).send(response.body);
   } catch (error) {
     console.error('Cora balance error:', error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Cora - Dados da conta (usa domínio third-party)
+app.get('/cora/account', authenticate, async (req, res) => {
+  try {
+    const authHeader = req.headers['authorization'];
+    const environment = req.headers['x-environment'] || 'production';
+    const host = environment === 'production' ? CORA_THIRDPARTY_PROD : CORA_THIRDPARTY_STAGE;
+
+    console.log('Cora account request to:', host, '/third-party/account/');
+
+    const response = await makeCoraRequest({
+      hostname: host,
+      path: '/third-party/account/',
+      method: 'GET',
+      headers: {
+        'Authorization': authHeader,
+      },
+    });
+
+    console.log('Cora account response:', response.statusCode, response.body.substring(0, 200));
+    res.status(response.statusCode).send(response.body);
+  } catch (error) {
+    console.error('Cora account error:', error.message);
     res.status(500).json({ error: error.message });
   }
 });
