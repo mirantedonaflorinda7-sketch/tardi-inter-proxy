@@ -585,26 +585,29 @@ app.get('/cora/statements', authenticate, async (req, res) => {
   }
 });
 
-// Cora - Consultar saldo (usa domínio mTLS)
+// Cora - Consultar saldo (testa múltiplos endpoints)
 app.get('/cora/balance', authenticate, async (req, res) => {
   try {
     const authHeader = req.headers['authorization'];
     const environment = req.headers['x-environment'] || 'production';
-    // Usar mesmo domínio mTLS para todas as APIs
-    const host = environment === 'production' ? CORA_API_PROD : CORA_API_STAGE;
+    
+    // Tentar no domínio api.cora.com.br COM mTLS
+    const host = environment === 'production' ? 'api.cora.com.br' : 'api.stage.cora.com.br';
+    const path = '/third-party/account/balance';
 
-    console.log('Cora balance request to:', host, '/balance');
+    console.log('Cora balance request to:', host, path);
 
     const response = await makeCoraRequest({
       hostname: host,
-      path: '/balance',
+      path: path,
       method: 'GET',
       headers: {
         'Authorization': authHeader,
+        'Accept': 'application/json',
       },
     });
 
-    console.log('Cora balance response:', response.statusCode, response.body.substring(0, 200));
+    console.log('Cora balance response:', response.statusCode, response.body.substring(0, 300));
     res.status(response.statusCode).send(response.body);
   } catch (error) {
     console.error('Cora balance error:', error.message);
