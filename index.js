@@ -93,16 +93,10 @@ function makeCoraRequest(options, postData = null) {
       rejectUnauthorized: true,
     };
 
-    console.log(`[Upstream] ${requestOptions.method} https://${requestOptions.hostname}${requestOptions.path}`);
-
     const req = https.request(requestOptions, (res) => {
       let data = '';
       res.on('data', (chunk) => data += chunk);
       res.on('end', () => {
-        console.log(`[Upstream Response] Status: ${res.statusCode}`);
-        if (res.statusCode >= 400) {
-             console.log(`[Upstream Error Body] ${data.substring(0, 1000)}`);
-        }
         resolve({
           statusCode: res.statusCode,
           headers: res.headers,
@@ -113,11 +107,7 @@ function makeCoraRequest(options, postData = null) {
 
     req.on('error', (error) => {
       console.error('[Upstream Error]', error);
-      resolve({
-        statusCode: 502,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ error: 'Upstream connection error', details: error.message }),
-      });
+      reject(error);
     });
 
     if (postData) {
@@ -421,8 +411,6 @@ app.post('/cora/invoices', authenticate, async (req, res) => {
     const host = environment === 'production' ? CORA_API_PROD : CORA_API_STAGE;
     const body = JSON.stringify(req.body);
 
-    console.log('Cora invoice create request:', { host, body: body.substring(0, 300) });
-
     const headers = {
       'Authorization': authHeader,
       'Content-Type': 'application/json',
@@ -440,7 +428,6 @@ app.post('/cora/invoices', authenticate, async (req, res) => {
       headers,
     }, body);
 
-    console.log('Cora invoice create response:', response.statusCode, response.body.substring(0, 500));
     res.status(response.statusCode).send(response.body);
   } catch (error) {
     console.error('Cora invoice create error:', error.message);
