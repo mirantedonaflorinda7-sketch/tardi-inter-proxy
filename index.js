@@ -717,8 +717,6 @@ app.post('/cora/transfers/initiate', authenticate, async (req, res) => {
     const host = environment === 'production' ? CORA_API_PROD : CORA_API_STAGE;
     const body = JSON.stringify(req.body);
 
-    console.log('Cora transfer initiate request:', { host, idempotencyKey, body: body.substring(0, 300) });
-
     const headers = {
       'Authorization': authHeader,
       'Content-Type': 'application/json',
@@ -736,7 +734,6 @@ app.post('/cora/transfers/initiate', authenticate, async (req, res) => {
       headers,
     }, body);
 
-    console.log('Cora transfer initiate response:', response.statusCode, response.body.substring(0, 500));
     res.status(response.statusCode).send(response.body);
   } catch (error) {
     console.error('Cora transfer initiate error:', error.message);
