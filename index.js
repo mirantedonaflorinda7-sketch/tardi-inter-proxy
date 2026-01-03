@@ -672,26 +672,33 @@ app.post('/cora/pix/charge', authenticate, async (req, res) => {
   }
 });
 
-// Cora - Enviar PIX (transferência)
+// Cora - Enviar PIX (transferência) - Integração Direta usa /transfers/pix
 app.post('/cora/pix/transfer', authenticate, async (req, res) => {
   try {
     const authHeader = req.headers['authorization'];
     const environment = req.headers['x-environment'] || 'production';
     const host = environment === 'production' ? CORA_API_PROD : CORA_API_STAGE;
-    const body = JSON.stringify(req.body);
+    
+    // Transformar body para formato esperado pela API Cora
+    const { pixKey, amount, description } = req.body;
+    const transferBody = JSON.stringify({
+      amount: amount,
+      key: pixKey,
+      description: description || 'Transferência PIX',
+    });
 
-    console.log('Cora PIX transfer request:', req.body);
+    console.log('Cora PIX transfer request:', { pixKey, amount, description });
 
     const response = await makeCoraRequest({
       hostname: host,
-      path: '/pix/payment',
+      path: '/transfers/pix',
       method: 'POST',
       headers: {
         'Authorization': authHeader,
         'Content-Type': 'application/json',
-        'Content-Length': Buffer.byteLength(body),
+        'Content-Length': Buffer.byteLength(transferBody),
       },
-    }, body);
+    }, transferBody);
 
     console.log('Cora PIX transfer response:', response.statusCode, response.body.substring(0, 300));
     res.status(response.statusCode).send(response.body);
