@@ -93,10 +93,16 @@ function makeCoraRequest(options, postData = null) {
       rejectUnauthorized: true,
     };
 
+    console.log(`[Upstream] ${requestOptions.method} https://${requestOptions.hostname}${requestOptions.path}`);
+
     const req = https.request(requestOptions, (res) => {
       let data = '';
       res.on('data', (chunk) => data += chunk);
       res.on('end', () => {
+        console.log(`[Upstream Response] Status: ${res.statusCode}`);
+        if (res.statusCode >= 400) {
+             console.log(`[Upstream Error Body] ${data.substring(0, 1000)}`);
+        }
         resolve({
           statusCode: res.statusCode,
           headers: res.headers,
@@ -106,6 +112,7 @@ function makeCoraRequest(options, postData = null) {
     });
 
     req.on('error', (error) => {
+      console.error('[Upstream Error]', error);
       reject(error);
     });
 
