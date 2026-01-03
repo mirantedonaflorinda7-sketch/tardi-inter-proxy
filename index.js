@@ -643,6 +643,89 @@ app.get('/cora/account', authenticate, async (req, res) => {
   }
 });
 
+// Cora - Criar cobrança PIX (receber)
+app.post('/cora/pix/charge', authenticate, async (req, res) => {
+  try {
+    const authHeader = req.headers['authorization'];
+    const environment = req.headers['x-environment'] || 'production';
+    const host = environment === 'production' ? CORA_API_PROD : CORA_API_STAGE;
+    const body = JSON.stringify(req.body);
+
+    console.log('Cora PIX charge request:', req.body);
+
+    const response = await makeCoraRequest({
+      hostname: host,
+      path: '/pix/qrcodes',
+      method: 'POST',
+      headers: {
+        'Authorization': authHeader,
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(body),
+      },
+    }, body);
+
+    console.log('Cora PIX charge response:', response.statusCode, response.body.substring(0, 300));
+    res.status(response.statusCode).send(response.body);
+  } catch (error) {
+    console.error('Cora PIX charge error:', error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Cora - Enviar PIX (transferência)
+app.post('/cora/pix/transfer', authenticate, async (req, res) => {
+  try {
+    const authHeader = req.headers['authorization'];
+    const environment = req.headers['x-environment'] || 'production';
+    const host = environment === 'production' ? CORA_API_PROD : CORA_API_STAGE;
+    const body = JSON.stringify(req.body);
+
+    console.log('Cora PIX transfer request:', req.body);
+
+    const response = await makeCoraRequest({
+      hostname: host,
+      path: '/pix/payment',
+      method: 'POST',
+      headers: {
+        'Authorization': authHeader,
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(body),
+      },
+    }, body);
+
+    console.log('Cora PIX transfer response:', response.statusCode, response.body.substring(0, 300));
+    res.status(response.statusCode).send(response.body);
+  } catch (error) {
+    console.error('Cora PIX transfer error:', error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Cora - Listar chaves PIX
+app.get('/cora/pix/keys', authenticate, async (req, res) => {
+  try {
+    const authHeader = req.headers['authorization'];
+    const environment = req.headers['x-environment'] || 'production';
+    const host = environment === 'production' ? CORA_API_PROD : CORA_API_STAGE;
+
+    const response = await makeCoraRequest({
+      hostname: host,
+      path: '/pix/keys',
+      method: 'GET',
+      headers: {
+        'Authorization': authHeader,
+        'Accept': 'application/json',
+      },
+    });
+
+    console.log('Cora PIX keys response:', response.statusCode, response.body.substring(0, 200));
+    res.status(response.statusCode).send(response.body);
+  } catch (error) {
+    console.error('Cora PIX keys error:', error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Cora - Proxy genérico
 app.all('/cora/proxy/*', authenticate, async (req, res) => {
   try {
