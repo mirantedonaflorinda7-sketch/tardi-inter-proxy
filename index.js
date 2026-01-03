@@ -708,6 +708,35 @@ app.post('/cora/pix/transfer', authenticate, async (req, res) => {
   }
 });
 
+// Cora - Iniciar transferência (POST /transfers/initiate)
+app.post('/cora/transfers/initiate', authenticate, async (req, res) => {
+  try {
+    const authHeader = req.headers['authorization'];
+    const environment = req.headers['x-environment'] || 'production';
+    const host = environment === 'production' ? CORA_API_PROD : CORA_API_STAGE;
+    const body = JSON.stringify(req.body);
+
+    console.log('Cora transfer initiate request:', body.substring(0, 300));
+
+    const response = await makeCoraRequest({
+      hostname: host,
+      path: '/transfers/initiate',
+      method: 'POST',
+      headers: {
+        'Authorization': authHeader,
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(body),
+      },
+    }, body);
+
+    console.log('Cora transfer initiate response:', response.statusCode, response.body.substring(0, 500));
+    res.status(response.statusCode).send(response.body);
+  } catch (error) {
+    console.error('Cora transfer initiate error:', error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Cora - Listar chaves PIX
 app.get('/cora/pix/keys', authenticate, async (req, res) => {
   try {
