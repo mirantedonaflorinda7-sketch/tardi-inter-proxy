@@ -7,11 +7,10 @@ app.use(cors());
 app.use(express.json());
 
 const INTER_API_URL = 'cdpj.partners.bancointer.com.br';
+// INTEGRAÇÃO DIRETA: usar SEMPRE matls-clients (mTLS obrigatório)
+// NUNCA usar api.cora.com.br (isso é API de parceiro)
 const CORA_API_STAGE = 'matls-clients.api.stage.cora.com.br';
 const CORA_API_PROD = 'matls-clients.api.cora.com.br';
-// Domínio para third-party (saldo, extrato, conta)
-const CORA_THIRDPARTY_STAGE = 'api.stage.cora.com.br';
-const CORA_THIRDPARTY_PROD = 'api.cora.com.br';
 
 // Certificado e chave em Base64 (vem das env vars)
 // Inter
@@ -555,16 +554,16 @@ app.delete('/cora/invoices/:invoiceId', authenticate, async (req, res) => {
   }
 });
 
-// Cora - Consultar extrato (usa domínio mTLS com /v1/statements)
+// Cora - Consultar extrato (Integração Direta: mTLS + /bank-statement/statement)
 app.get('/cora/statements', authenticate, async (req, res) => {
   try {
     const authHeader = req.headers['authorization'];
     const environment = req.headers['x-environment'] || 'production';
-    // Integração Direta: usar domínio mTLS. Os endpoints de conta/extrato ficam sob /third-party
+    // Integração Direta: usar SEMPRE matls-clients.api.cora.com.br
     const host = environment === 'production' ? CORA_API_PROD : CORA_API_STAGE;
 
     const queryParams = new URLSearchParams(req.query).toString();
-    const path = queryParams ? `/third-party/statements?${queryParams}` : '/third-party/statements';
+    const path = queryParams ? `/bank-statement/statement?${queryParams}` : '/bank-statement/statement';
 
     console.log('Cora statements request to:', { environment, host, path });
 
@@ -586,12 +585,12 @@ app.get('/cora/statements', authenticate, async (req, res) => {
   }
 });
 
-// Cora - Consultar saldo (Integração Direta: domínio mTLS + /third-party/account/balance)
+// Cora - Consultar saldo (Integração Direta: mTLS + /third-party/account/balance)
 app.get('/cora/balance', authenticate, async (req, res) => {
   try {
     const authHeader = req.headers['authorization'];
     const environment = req.headers['x-environment'] || 'production';
-    // Integração Direta: usar domínio mTLS. Os endpoints de conta/saldo ficam sob /third-party
+    // Integração Direta: usar SEMPRE matls-clients.api.cora.com.br
     const host = environment === 'production' ? CORA_API_PROD : CORA_API_STAGE;
     const path = '/third-party/account/balance';
 
@@ -615,11 +614,12 @@ app.get('/cora/balance', authenticate, async (req, res) => {
   }
 });
 
-// Cora - Dados da conta (Integração Direta: domínio mTLS + /third-party/account/)
+// Cora - Dados da conta (Integração Direta: mTLS + /third-party/account/)
 app.get('/cora/account', authenticate, async (req, res) => {
   try {
     const authHeader = req.headers['authorization'];
     const environment = req.headers['x-environment'] || 'production';
+    // Integração Direta: usar SEMPRE matls-clients.api.cora.com.br
     const host = environment === 'production' ? CORA_API_PROD : CORA_API_STAGE;
     const path = '/third-party/account/';
 
