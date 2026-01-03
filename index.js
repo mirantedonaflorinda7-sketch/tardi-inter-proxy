@@ -742,6 +742,8 @@ app.all('/cora/proxy/*', authenticate, async (req, res) => {
     const host = environment === 'production' ? CORA_API_PROD : CORA_API_STAGE;
     const body = req.method !== 'GET' ? JSON.stringify(req.body) : null;
 
+    console.log('Cora proxy request:', { method: req.method, path: '/' + path, host, body: body?.substring(0, 200) });
+
     const headers = {
       'Authorization': authHeader,
     };
@@ -758,6 +760,7 @@ app.all('/cora/proxy/*', authenticate, async (req, res) => {
       headers,
     }, body);
 
+    console.log('Cora proxy response:', response.statusCode, response.body?.substring(0, 500));
     res.status(response.statusCode).send(response.body);
   } catch (error) {
     console.error('Cora proxy error:', error.message);
