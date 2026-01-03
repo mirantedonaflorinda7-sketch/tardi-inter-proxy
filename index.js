@@ -437,7 +437,7 @@ app.post('/cora/invoices', authenticate, async (req, res) => {
   }
 });
 
-// Cora - Listar boletos
+// Cora - Listar boletos (v2)
 app.get('/cora/invoices', authenticate, async (req, res) => {
   try {
     const authHeader = req.headers['authorization'];
@@ -445,7 +445,7 @@ app.get('/cora/invoices', authenticate, async (req, res) => {
     const host = environment === 'production' ? CORA_API_PROD : CORA_API_STAGE;
     
     const queryParams = new URLSearchParams(req.query).toString();
-    const path = queryParams ? `/invoices?${queryParams}` : '/invoices';
+    const path = queryParams ? `/v2/invoices?${queryParams}` : '/v2/invoices';
 
     const response = await makeCoraRequest({
       hostname: host,
