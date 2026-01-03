@@ -113,7 +113,11 @@ function makeCoraRequest(options, postData = null) {
 
     req.on('error', (error) => {
       console.error('[Upstream Error]', error);
-      reject(error);
+      resolve({
+        statusCode: 502,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ error: 'Upstream connection error', details: error.message }),
+      });
     });
 
     if (postData) {
