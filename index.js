@@ -708,7 +708,7 @@ app.post('/cora/pix/transfer', authenticate, async (req, res) => {
   }
 });
 
-// Cora - Iniciar transferência (POST /third-party/transfers/initiate)
+// Cora - Iniciar transferência (POST /transfers/initiate)
 app.post('/cora/transfers/initiate', authenticate, async (req, res) => {
   try {
     const authHeader = req.headers['authorization'];
@@ -720,7 +720,7 @@ app.post('/cora/transfers/initiate', authenticate, async (req, res) => {
 
     const response = await makeCoraRequest({
       hostname: host,
-      path: '/third-party/transfers/initiate',
+      path: '/transfers/initiate',
       method: 'POST',
       headers: {
         'Authorization': authHeader,
