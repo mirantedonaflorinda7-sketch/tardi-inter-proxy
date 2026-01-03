@@ -560,13 +560,13 @@ app.get('/cora/statements', authenticate, async (req, res) => {
   try {
     const authHeader = req.headers['authorization'];
     const environment = req.headers['x-environment'] || 'production';
-    // Usar domínio mTLS para Integração Direta
+    // Integração Direta: usar domínio mTLS. Os endpoints de conta/extrato ficam sob /third-party
     const host = environment === 'production' ? CORA_API_PROD : CORA_API_STAGE;
-    
-    const queryParams = new URLSearchParams(req.query).toString();
-    const path = queryParams ? `/v1/statements?${queryParams}` : '/v1/statements';
 
-    console.log('Cora statements request to:', host, path);
+    const queryParams = new URLSearchParams(req.query).toString();
+    const path = queryParams ? `/third-party/statements?${queryParams}` : '/third-party/statements';
+
+    console.log('Cora statements request to:', { environment, host, path });
 
     const response = await makeCoraRequest({
       hostname: host,
@@ -574,6 +574,7 @@ app.get('/cora/statements', authenticate, async (req, res) => {
       method: 'GET',
       headers: {
         'Authorization': authHeader,
+        'Accept': 'application/json',
       },
     });
 
@@ -585,16 +586,16 @@ app.get('/cora/statements', authenticate, async (req, res) => {
   }
 });
 
-// Cora - Consultar saldo (usa domínio mTLS com /v1/balance)
+// Cora - Consultar saldo (Integração Direta: domínio mTLS + /third-party/account/balance)
 app.get('/cora/balance', authenticate, async (req, res) => {
   try {
     const authHeader = req.headers['authorization'];
     const environment = req.headers['x-environment'] || 'production';
-    // Usar domínio mTLS para Integração Direta
+    // Integração Direta: usar domínio mTLS. Os endpoints de conta/saldo ficam sob /third-party
     const host = environment === 'production' ? CORA_API_PROD : CORA_API_STAGE;
-    const path = '/v1/balance';
+    const path = '/third-party/account/balance';
 
-    console.log('Cora balance request to:', host, path);
+    console.log('Cora balance request to:', { environment, host, path });
 
     const response = await makeCoraRequest({
       hostname: host,
@@ -614,21 +615,23 @@ app.get('/cora/balance', authenticate, async (req, res) => {
   }
 });
 
-// Cora - Dados da conta (usa domínio third-party)
+// Cora - Dados da conta (Integração Direta: domínio mTLS + /third-party/account/)
 app.get('/cora/account', authenticate, async (req, res) => {
   try {
     const authHeader = req.headers['authorization'];
     const environment = req.headers['x-environment'] || 'production';
-    const host = environment === 'production' ? CORA_THIRDPARTY_PROD : CORA_THIRDPARTY_STAGE;
+    const host = environment === 'production' ? CORA_API_PROD : CORA_API_STAGE;
+    const path = '/third-party/account/';
 
-    console.log('Cora account request to:', host, '/third-party/account/');
+    console.log('Cora account request to:', { environment, host, path });
 
     const response = await makeCoraRequest({
       hostname: host,
-      path: '/third-party/account/',
+      path,
       method: 'GET',
       headers: {
         'Authorization': authHeader,
+        'Accept': 'application/json',
       },
     });
 
