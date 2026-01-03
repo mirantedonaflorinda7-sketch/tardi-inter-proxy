@@ -401,25 +401,35 @@ app.post('/cora/oauth/token', authenticate, async (req, res) => {
   }
 });
 
-// Cora - Emitir boleto
+// Cora - Emitir boleto (v2)
 app.post('/cora/invoices', authenticate, async (req, res) => {
   try {
     const authHeader = req.headers['authorization'];
+    const idempotencyKey = req.headers['idempotency-key'];
     const environment = req.headers['x-environment'] || 'production';
     const host = environment === 'production' ? CORA_API_PROD : CORA_API_STAGE;
     const body = JSON.stringify(req.body);
 
+    console.log('Cora invoice create request:', { host, body: body.substring(0, 300) });
+
+    const headers = {
+      'Authorization': authHeader,
+      'Content-Type': 'application/json',
+      'Content-Length': Buffer.byteLength(body),
+    };
+
+    if (idempotencyKey) {
+      headers['Idempotency-Key'] = idempotencyKey;
+    }
+
     const response = await makeCoraRequest({
       hostname: host,
-      path: '/invoices',
+      path: '/v2/invoices',
       method: 'POST',
-      headers: {
-        'Authorization': authHeader,
-        'Content-Type': 'application/json',
-        'Content-Length': Buffer.byteLength(body),
-      },
+      headers,
     }, body);
 
+    console.log('Cora invoice create response:', response.statusCode, response.body.substring(0, 500));
     res.status(response.statusCode).send(response.body);
   } catch (error) {
     console.error('Cora invoice create error:', error.message);
