@@ -749,6 +749,60 @@ app.post('/cora/transfers/initiate', authenticate, async (req, res) => {
   }
 });
 
+// Cora - Consultar transferência específica (TED/PIX) por ID
+app.get('/cora/transfers/:transferId', authenticate, async (req, res) => {
+  try {
+    const { transferId } = req.params;
+    const authHeader = req.headers['authorization'];
+    const environment = req.headers['x-environment'] || 'production';
+    const host = environment === 'production' ? CORA_API_PROD : CORA_API_STAGE;
+
+    const response = await makeCoraRequest({
+      hostname: host,
+      path: `/transfers/${transferId}`,
+      method: 'GET',
+      headers: {
+        'Authorization': authHeader,
+        'Accept': 'application/json',
+      },
+    });
+
+    console.log('Cora transfer status response:', response.statusCode);
+    res.status(response.statusCode).send(response.body);
+  } catch (error) {
+    console.error('Cora transfer status error:', error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Cora - Listar transferências
+app.get('/cora/transfers', authenticate, async (req, res) => {
+  try {
+    const authHeader = req.headers['authorization'];
+    const environment = req.headers['x-environment'] || 'production';
+    const host = environment === 'production' ? CORA_API_PROD : CORA_API_STAGE;
+    
+    const queryParams = new URLSearchParams(req.query).toString();
+    const path = queryParams ? `/transfers?${queryParams}` : '/transfers';
+
+    const response = await makeCoraRequest({
+      hostname: host,
+      path,
+      method: 'GET',
+      headers: {
+        'Authorization': authHeader,
+        'Accept': 'application/json',
+      },
+    });
+
+    console.log('Cora transfers list response:', response.statusCode);
+    res.status(response.statusCode).send(response.body);
+  } catch (error) {
+    console.error('Cora transfers list error:', error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Cora - Listar chaves PIX
 app.get('/cora/pix/keys', authenticate, async (req, res) => {
   try {
