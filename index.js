@@ -815,7 +815,7 @@ app.post('/cora/webhooks', authenticate, async (req, res) => {
 
     const response = await makeCoraRequest({
       hostname: host,
-      path: '/webhooks/endpoints',
+      path: '/notifications/endpoints',
       method: 'POST',
       headers: {
         'Authorization': authHeader,
@@ -841,7 +841,7 @@ app.get('/cora/webhooks', authenticate, async (req, res) => {
 
     const response = await makeCoraRequest({
       hostname: host,
-      path: '/webhooks/endpoints',
+      path: '/notifications/endpoints',
       method: 'GET',
       headers: {
         'Authorization': authHeader,
