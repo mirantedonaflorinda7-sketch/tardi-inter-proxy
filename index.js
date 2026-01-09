@@ -803,6 +803,60 @@ app.get('/cora/transfers', authenticate, async (req, res) => {
   }
 });
 
+// Cora - Criar webhook endpoint
+app.post('/cora/webhooks', authenticate, async (req, res) => {
+  try {
+    const authHeader = req.headers['authorization'];
+    const environment = req.headers['x-environment'] || 'production';
+    const host = environment === 'production' ? CORA_API_PROD : CORA_API_STAGE;
+    const body = JSON.stringify(req.body);
+
+    console.log('Cora webhook create request:', req.body);
+
+    const response = await makeCoraRequest({
+      hostname: host,
+      path: '/webhooks/endpoints',
+      method: 'POST',
+      headers: {
+        'Authorization': authHeader,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+    }, body);
+
+    console.log('Cora webhook create response:', response.statusCode, response.body.substring(0, 200));
+    res.status(response.statusCode).send(response.body);
+  } catch (error) {
+    console.error('Cora webhook create error:', error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Cora - Listar webhooks
+app.get('/cora/webhooks', authenticate, async (req, res) => {
+  try {
+    const authHeader = req.headers['authorization'];
+    const environment = req.headers['x-environment'] || 'production';
+    const host = environment === 'production' ? CORA_API_PROD : CORA_API_STAGE;
+
+    const response = await makeCoraRequest({
+      hostname: host,
+      path: '/webhooks/endpoints',
+      method: 'GET',
+      headers: {
+        'Authorization': authHeader,
+        'Accept': 'application/json',
+      },
+    });
+
+    console.log('Cora webhooks list response:', response.statusCode);
+    res.status(response.statusCode).send(response.body);
+  } catch (error) {
+    console.error('Cora webhooks list error:', error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Cora - Listar chaves PIX
 app.get('/cora/pix/keys', authenticate, async (req, res) => {
   try {
