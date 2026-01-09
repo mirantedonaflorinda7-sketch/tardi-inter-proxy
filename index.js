@@ -775,7 +775,7 @@ app.get('/cora/transfers/:transferId', authenticate, async (req, res) => {
   }
 });
 
-// Cora - Listar transferências
+// Cora - Listar transferências (Integração Direta usa /transfer/third-party/transfers/)
 app.get('/cora/transfers', authenticate, async (req, res) => {
   try {
     const authHeader = req.headers['authorization'];
@@ -783,7 +783,7 @@ app.get('/cora/transfers', authenticate, async (req, res) => {
     const host = environment === 'production' ? CORA_API_PROD : CORA_API_STAGE;
     
     const queryParams = new URLSearchParams(req.query).toString();
-    const path = queryParams ? `/transfers?${queryParams}` : '/transfers';
+    const path = queryParams ? `/transfer/third-party/transfers?${queryParams}` : '/transfer/third-party/transfers';
 
     const response = await makeCoraRequest({
       hostname: host,
