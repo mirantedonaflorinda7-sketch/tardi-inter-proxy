@@ -423,7 +423,7 @@ app.post('/cora/invoices', authenticate, async (req, res) => {
 
     const response = await makeCoraRequest({
       hostname: host,
-      path: '/invoices',
+      path: '/v2/invoices/',
       method: 'POST',
       headers,
     }, body);
